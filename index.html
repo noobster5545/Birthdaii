@@ -64,6 +64,7 @@
   <div id="status-msg" class="hidden">Blow into the mic! 🎂</div>
 
   <video id="video1" playsinline loop muted src="video1.mp4"></video>
+
   <video id="video2" class="hidden" playsinline muted src="video2.mp4"></video>
 
   <script>
@@ -82,18 +83,22 @@
       startBtn.style.display = 'none';
       statusMsg.classList.remove('hidden');
 
-      // Play Video 1
-      video1.play().catch(err => console.error("Video 1 playback error:", err));
+      // 1. Play Video 1 continuously on loop
+      video1.loop = true;
+      video1.play().catch(err => console.error("Video 1 play error:", err));
 
-      // Preload Video 2
-      video2.load();
+      // 2. Initialize Video 2 during user tap to unlock mobile browser restrictions
+      video2.play().then(() => {
+        video2.pause();
+        video2.currentTime = 0;
+      }).catch(err => console.log("Video 2 pre-play initialization:", err));
 
-      // Request microphone access
+      // 3. Request microphone permission
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         initMicDetection(stream);
       } catch (err) {
-        alert('Microphone access is required to blow out the candle.');
+        alert('Microphone permission is required to detect blowing.');
         console.error(err);
       }
     });
@@ -129,8 +134,8 @@
 
         const average = values / array.length;
 
-        // Sound intensity threshold for blowing
-        if (average > 38) {
+        // Sound sensitivity threshold for blowing air
+        if (average > 35) {
           hasSwitched = true;
           switchVideos();
         }
@@ -144,11 +149,21 @@
       video1.pause();
       video1.classList.add('hidden');
 
-      // Unhide and play Video 2
+      // Unhide and trigger Video 2
       video2.classList.remove('hidden');
       video2.currentTime = 0;
-      video2.play().catch(e => console.error("Video 2 play error:", e));
+      
+      const playPromise = video2.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Video 2 play error:", error);
+          // Fallback force play
+          video2.muted = true;
+          video2.play();
+        });
+      }
 
+      // Close mic stream after switching
       if (audioContext) {
         audioContext.close();
       }
