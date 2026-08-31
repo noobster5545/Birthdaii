@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%; overflow: hidden; background-color: #000;
+      display: flex; justify-content: center; align-items: center; font-family: sans-serif;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    #play-btn {
+      position: absolute; z-index: 10; padding: 20px 40px; font-size: 22px;
+      font-weight: bold; color: #fff; background-color: #28a745; border: none;
+      border-radius: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(40,167,69,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <button id="play-btn">Tap to see your wish! 🎉</button>
+
+  <video id="video2" playsinline src="video2.mp4"></video>
+
+  <script>
+    const playBtn = document.getElementById('play-btn');
+    const video2 = document.getElementById('video2');
+
+    playBtn.addEventListener('click', () => {
+      playBtn.style.display = 'none';
+      
+      // Forces video playback with audio on mobile tap
+      video2.muted = false;
+      video2.play().catch(err => {
+        console.error("Video 2 playback error:", err);
+        alert("Video error: Make sure video2.mp4 is formatted in standard H.264 MP4 format.");
+      });
+    });
+  </script>
+</body>
+</html>
