@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mic Blowing Video Switcher</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .hidden {
+      display: none;
+    }
+    #start-btn {
+      position: absolute;
+      z-index: 10;
+      padding: 16px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="start-btn">Tap to Start</button>
+
+  <!-- Video 1 from your first Drive link -->
+  <video id="video1" playsinline loop muted crossorigin="anonymous" src="https://drive.google.com/uc?export=download&id=1E8f3jCnSKWxy01kauqSQmQ5GLxt6VHje"></video>
+
+  <!-- Video 2 from your second Drive link -->
+  <video id="video2" class="hidden" playsinline crossorigin="anonymous" src="https://drive.google.com/uc?export=download&id=1ZPqiRv2mfdFd-i9bsXubWohlIczPC5I-"></video>
+
+  <script>
+    const startBtn = document.getElementById('start-btn');
+    const video1 = document.getElementById('video1');
+    const video2 = document.getElementById('video2');
+
+    let audioContext;
+    let analyser;
+    let microphone;
+    let javascriptNode;
+    let hasSwitched = false;
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.style.display = 'none';
+      
+      video1.play().catch(e => console.error("Video 1 play error:", e));
+      video2.load();
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        initMicDetection(stream);
+      } catch (err) {
+        alert('Microphone access is required to detect blowing.');
+        console.error(err);
+      }
+    });
+
+    function initMicDetection(stream) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      microphone = audioContext.createMediaStreamSource(stream);
+      javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+      analyser.smoothingTimeConstant = 0.3;
+      analyser.fftSize = 1024;
+
+      microphone.connect(analyser);
+      analyser.connect(javascriptNode);
+      javascriptNode.connect(audioContext.destination);
+
+      javascriptNode.onaudioprocess = () => {
+        if (hasSwitched) return;
+
+        const array = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(array);
+        
+        let values = 0;
+        for (let i = 0; i < array.length; i++) {
+          values += array[i];
+        }
+
+        const average = values / array.length;
+
+        // Blow detection sensitivity threshold
+        if (average > 45) {
+          hasSwitched = true;
+          switchVideos();
+        }
+      };
+    }
+
+    function switchVideos() {
+      video1.pause();
+      video1.classList.add('hidden');
+
+      video2.classList.remove('hidden');
+      video2.muted = false;
+      video2.play().catch(e => console.error("Video 2 play error:", e));
+
+      if (audioContext) {
+        audioContext.close();
+      }
+    }
+  </script>
+</body>
+</html>
