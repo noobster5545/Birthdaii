@@ -27,10 +27,12 @@
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1;
     }
-    .hidden {
-      display: none !important;
+    #video1 {
+      z-index: 2;
+    }
+    #video2 {
+      z-index: 1;
     }
     #start-btn {
       position: absolute;
@@ -56,6 +58,9 @@
       font-size: 14px;
       pointer-events: none;
     }
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -65,7 +70,7 @@
 
   <video id="video1" playsinline loop muted src="video1.mp4"></video>
 
-  <video id="video2" class="hidden" playsinline muted src="video2.mp4"></video>
+  <video id="video2" playsinline muted src="video2.mp4"></video>
 
   <script>
     const startBtn = document.getElementById('start-btn');
@@ -76,34 +81,36 @@
     let audioContext;
     let analyser;
     let microphone;
-    let javascriptNode;
-    let hasSwitched = false;
+    let isSwitched = false;
 
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       statusMsg.classList.remove('hidden');
 
-      // 1. Play Video 1 continuously on loop
+      // 1. Play Video 1 on loop
       video1.loop = true;
-      video1.play().catch(err => console.error("Video 1 play error:", err));
+      await video1.play().catch(e => console.error("V1 Play Error:", e));
 
-      // 2. Initialize Video 2 during user tap to unlock mobile browser restrictions
-      video2.play().then(() => {
+      // 2. UNLOCK Video 2 immediately inside the tap event
+      try {
+        await video2.play();
         video2.pause();
         video2.currentTime = 0;
-      }).catch(err => console.log("Video 2 pre-play initialization:", err));
+      } catch (e) {
+        console.error("V2 Unlock Error:", e);
+      }
 
-      // 3. Request microphone permission
+      // 3. Start Microphone Stream
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        initMicDetection(stream);
+        startMicAnalysis(stream);
       } catch (err) {
-        alert('Microphone permission is required to detect blowing.');
+        alert('Microphone access is required.');
         console.error(err);
       }
     });
 
-    function initMicDetection(stream) {
+    function startMicAnalysis(stream) {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       
       if (audioContext.state === 'suspended') {
@@ -112,58 +119,49 @@
 
       analyser = audioContext.createAnalyser();
       microphone = audioContext.createMediaStreamSource(stream);
-      javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-
-      analyser.smoothingTimeConstant = 0.3;
-      analyser.fftSize = 1024;
-
+      
+      analyser.fftSize = 256;
       microphone.connect(analyser);
-      analyser.connect(javascriptNode);
-      javascriptNode.connect(audioContext.destination);
 
-      javascriptNode.onaudioprocess = () => {
-        if (hasSwitched) return;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
 
-        const array = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(array);
+      function checkAudio() {
+        if (isSwitched) return;
+
+        analyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
         
-        let values = 0;
-        for (let i = 0; i < array.length; i++) {
-          values += array[i];
+        const average = sum / bufferLength;
+
+        // Sensitivity threshold: 25 is ideal for detection across mobile mics
+        if (average > 25) {
+          isSwitched = true;
+          triggerVideoSwitch();
+          return;
         }
 
-        const average = values / array.length;
-
-        // Sound sensitivity threshold for blowing air
-        if (average > 35) {
-          hasSwitched = true;
-          switchVideos();
-        }
-      };
-    }
-
-    function switchVideos() {
-      statusMsg.classList.add('hidden');
-      
-      // Stop and hide Video 1
-      video1.pause();
-      video1.classList.add('hidden');
-
-      // Unhide and trigger Video 2
-      video2.classList.remove('hidden');
-      video2.currentTime = 0;
-      
-      const playPromise = video2.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error("Video 2 play error:", error);
-          // Fallback force play
-          video2.muted = true;
-          video2.play();
-        });
+        requestAnimationFrame(checkAudio);
       }
 
-      // Close mic stream after switching
+      checkAudio();
+    }
+
+    function triggerVideoSwitch() {
+      statusMsg.classList.add('hidden');
+
+      // Hide Video 1 and bring Video 2 forward
+      video1.pause();
+      video1.style.display = 'none';
+
+      // Play Video 2
+      video2.currentTime = 0;
+      video2.play().catch(err => console.error("V2 Play Failed:", err));
+
       if (audioContext) {
         audioContext.close();
       }
