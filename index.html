@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mic Blowing Video Switcher</title>
+  <title>Birthday Wish</title>
   <style>
     * {
       margin: 0;
@@ -48,11 +48,8 @@
 
   <button id="start-btn">Tap to Start</button>
 
-  <!-- Video 1 from your first Drive link -->
-  <video id="video1" playsinline loop muted crossorigin="anonymous" src="https://drive.google.com/uc?export=download&id=1E8f3jCnSKWxy01kauqSQmQ5GLxt6VHje"></video>
-
-  <!-- Video 2 from your second Drive link -->
-  <video id="video2" class="hidden" playsinline crossorigin="anonymous" src="https://drive.google.com/uc?export=download&id=1ZPqiRv2mfdFd-i9bsXubWohlIczPC5I-"></video>
+  <video id="video1" playsinline loop muted src="video1.mp4"></video>
+  <video id="video2" class="hidden" playsinline src="video2.mp4"></video>
 
   <script>
     const startBtn = document.getElementById('start-btn');
@@ -68,7 +65,7 @@
     startBtn.addEventListener('click', async () => {
       startBtn.style.display = 'none';
       
-      video1.play().catch(e => console.error("Video 1 play error:", e));
+      video1.play().catch(e => console.error("Video 1 playback error:", e));
       video2.load();
 
       try {
@@ -106,7 +103,6 @@
 
         const average = values / array.length;
 
-        // Blow detection sensitivity threshold
         if (average > 45) {
           hasSwitched = true;
           switchVideos();
@@ -120,7 +116,7 @@
 
       video2.classList.remove('hidden');
       video2.muted = false;
-      video2.play().catch(e => console.error("Video 2 play error:", e));
+      video2.play().catch(e => console.error("Video 2 playback error:", e));
 
       if (audioContext) {
         audioContext.close();
