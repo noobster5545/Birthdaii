@@ -61,10 +61,10 @@
 <body>
 
   <button id="start-btn">Tap to Start</button>
-  <div id="status-msg" class="hidden">Listening... Blow into the mic!</div>
+  <div id="status-msg" class="hidden">Blow into the mic! 🎂</div>
 
   <video id="video1" playsinline loop muted src="video1.mp4"></video>
-  <video id="video2" class="hidden" playsinline src="video2.mp4"></video>
+  <video id="video2" class="hidden" playsinline muted src="video2.mp4"></video>
 
   <script>
     const startBtn = document.getElementById('start-btn');
@@ -82,12 +82,8 @@
       startBtn.style.display = 'none';
       statusMsg.classList.remove('hidden');
 
-      // Start playing Video 1 explicitly
-      try {
-        await video1.play();
-      } catch (err) {
-        console.error("Video 1 playback error:", err);
-      }
+      // Play Video 1
+      video1.play().catch(err => console.error("Video 1 playback error:", err));
 
       // Preload Video 2
       video2.load();
@@ -97,7 +93,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         initMicDetection(stream);
       } catch (err) {
-        alert('Microphone access was denied or is not supported. Please allow mic permissions in your browser settings.');
+        alert('Microphone access is required to blow out the candle.');
         console.error(err);
       }
     });
@@ -133,8 +129,8 @@
 
         const average = values / array.length;
 
-        // Sound intensity threshold for blowing into the mic
-        if (average > 40) {
+        // Sound intensity threshold for blowing
+        if (average > 38) {
           hasSwitched = true;
           switchVideos();
         }
@@ -144,18 +140,14 @@
     function switchVideos() {
       statusMsg.classList.add('hidden');
       
+      // Stop and hide Video 1
       video1.pause();
       video1.classList.add('hidden');
 
+      // Unhide and play Video 2
       video2.classList.remove('hidden');
-      video2.muted = false;
-
-      video2.play().catch(e => {
-        console.error("Video 2 play error:", e);
-        // Fallback: if mobile audio policy blocks unmuted play, try playing muted
-        video2.muted = true;
-        video2.play();
-      });
+      video2.currentTime = 0;
+      video2.play().catch(e => console.error("Video 2 play error:", e));
 
       if (audioContext) {
         audioContext.close();
